@@ -1,0 +1,553 @@
+:root {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --ink: #17202a;
+  --muted: #64748b;
+  --line: #dbe3ea;
+  --teal: #0f766e;
+  --teal-ink: #083f3c;
+  --gold: #b45309;
+  --red: #b91c1c;
+  --green: #15803d;
+  --lime: #4d7c0f;
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100vh;
+  padding: 24px;
+  background: #102326;
+  color: #f8fafc;
+}
+
+.brandBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandMark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #f5c542;
+  color: #1f2937;
+  font-weight: 800;
+}
+
+.brandBlock h1,
+.topbar h2,
+.panel h3,
+.customerRow h4,
+.productItem h4 {
+  margin: 0;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.sidebar .eyebrow,
+.syncPanel {
+  color: #a8c5c2;
+}
+
+.navList {
+  display: grid;
+  gap: 6px;
+}
+
+.navList a {
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: #cbd5e1;
+}
+
+.navList a.active,
+.navList a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.syncPanel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 0.9rem;
+}
+
+.statusDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.workspace {
+  min-width: 0;
+  padding: 24px;
+}
+
+.topbar,
+.topActions,
+.panelHeader,
+.heroBand,
+.customerRow,
+.productItem,
+.tableRow {
+  display: flex;
+  align-items: center;
+}
+
+.topbar {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.topbar h2 {
+  font-size: clamp(1.45rem, 2vw, 2rem);
+}
+
+.topActions {
+  gap: 10px;
+}
+
+.companySwitch {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.companySwitch select,
+.lookupForm input,
+.lookupForm button,
+.paymentForm input,
+.loginForm input,
+.loginForm select,
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.companySwitch select,
+.lookupForm input,
+.paymentForm input,
+.loginForm input,
+.loginForm select {
+  padding: 0 12px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.primaryButton,
+.lookupForm button {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+  font-weight: 800;
+  padding: 0 16px;
+}
+
+.ghostButton {
+  background: #fff;
+  color: var(--teal-ink);
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.companyLock {
+  display: grid;
+  min-height: 42px;
+  align-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 12px;
+}
+
+.companyLock span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.userPanel {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 16px;
+}
+
+.userPanel small {
+  color: #a8c5c2;
+  overflow-wrap: anywhere;
+}
+
+.rolePill {
+  justify-self: start;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.loadingScreen,
+.loginPage {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 18px;
+}
+
+.loadingScreen {
+  gap: 12px;
+  align-content: center;
+}
+
+.loginPage {
+  background:
+    linear-gradient(180deg, rgba(16, 35, 38, 0.92), rgba(16, 35, 38, 0.84)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23102326'/%3E%3Cpath d='M20 30h140M20 75h100M20 120h140M60 15v150M120 15v150' stroke='%23f5c542' stroke-opacity='.16' stroke-width='8'/%3E%3C/svg%3E");
+}
+
+.loginShell {
+  width: min(100%, 430px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+  padding: 24px;
+}
+
+.loginBrand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.loginBrand h1 {
+  margin: 0;
+}
+
+.loginForm {
+  display: grid;
+  gap: 14px;
+}
+
+.loginForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.loginAccessBox {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.loginAccessBox p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.heroBand {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.heroBand > div,
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.heroBand > div {
+  padding: 18px;
+}
+
+.heroBand strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: clamp(1.45rem, 2.6vw, 2.35rem);
+}
+
+.heroBand span,
+.customerRow p,
+.productItem p,
+.productItem span,
+.balanceBox span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(310px, 0.75fr);
+  gap: 16px;
+}
+
+.panel {
+  padding: 18px;
+}
+
+.widePanel {
+  grid-column: 1 / -1;
+}
+
+.panelHeader {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.latencyBadge,
+.ratingBadge {
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.latencyBadge {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.lookupForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.customerList,
+.productStack,
+.paymentForm {
+  display: grid;
+  gap: 10px;
+}
+
+.customerRow,
+.productItem {
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.customerRow p {
+  margin: 6px 0 0;
+}
+
+.ratingBadge {
+  display: inline-flex;
+  margin-bottom: 8px;
+}
+
+.ratingExcellent {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.ratingGood {
+  background: #ecfccb;
+  color: var(--lime);
+}
+
+.ratingAverage {
+  background: #fef3c7;
+  color: var(--gold);
+}
+
+.ratingRisky {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.ratingDefaulter {
+  background: #fee2e2;
+  color: var(--red);
+}
+
+.balanceBox {
+  display: grid;
+  min-width: 108px;
+  justify-items: end;
+}
+
+.productItem strong {
+  color: var(--teal);
+}
+
+.productItem span {
+  text-align: right;
+}
+
+.paymentForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.tableLike {
+  display: grid;
+  gap: 8px;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 0.7fr 1.2fr 0.6fr 0.9fr auto auto;
+  gap: 10px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.tableRow a {
+  color: var(--teal);
+  font-weight: 800;
+}
+
+@media (max-width: 980px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .navList {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .syncPanel {
+    display: none;
+  }
+
+  .heroBand,
+  .contentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dcsPanel,
+  .widePanel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .workspace,
+  .sidebar {
+    padding: 16px;
+  }
+
+  .topbar,
+  .topActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .heroBand,
+  .contentGrid,
+  .lookupForm {
+    grid-template-columns: 1fr;
+  }
+
+  .navList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .customerRow,
+  .productItem {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .balanceBox {
+    justify-items: start;
+  }
+
+  .tableRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
