@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { AuthenticationResponseJSON, AuthenticatorTransportFuture } from "@simplewebauthn/server";
+
+export const dynamic = "force-dynamic";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";

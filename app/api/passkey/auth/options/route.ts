@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateAuthenticationOptions } from "@simplewebauthn/server";
+
+export const dynamic = "force-dynamic";
 import { db } from "@/lib/db";
 import { verification } from "@/drizzle/schema";
 import { getPasskeyConfig } from "@/lib/passkey";

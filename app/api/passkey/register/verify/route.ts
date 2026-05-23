@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import { and, eq, gt } from "drizzle-orm";

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
 import { generateRegistrationOptions } from "@simplewebauthn/server";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
