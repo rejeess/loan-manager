@@ -13,7 +13,7 @@ Done:
 
 Not done:
 
-- Supabase schema.
+- SQLite/Drizzle schema.
 - Auth.
 - Real data.
 - Server Actions.
@@ -27,8 +27,8 @@ Goal: owner and clerk can log in, switch company where allowed, and see protecte
 Suggested order:
 
 1. Add `.env.example`.
-2. Install Supabase client packages.
-3. Create `supabase/migrations/0001_foundation.sql`.
+2. Install Drizzle ORM and Better Auth packages with `bun add`.
+3. Create `drizzle/schema.ts` and run `bunx drizzle-kit generate`.
 4. Create `lib/db/server.ts` and `lib/db/browser.ts`.
 5. Add auth routes: `/login`, `/forgot-password`.
 6. Add protected app group layout.

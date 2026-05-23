@@ -24,7 +24,7 @@ RLS policies on the above.
 
 /login page (email + password).
 
-2FA setup flow for owners (TOTP, stored in Supabase Auth).
+2FA setup flow for owners (TOTP via Better Auth TOTP plugin).
 
 2FA challenge on login when configured.
 
@@ -52,7 +52,7 @@ Owner-only /settings/company page.
 
 Form to edit company details (legal name, address, phone, license, T&Cs, logo).
 
-Logo upload to Supabase Storage.
+Logo upload to local file storage (`/uploads`).
 
 1.5 User management
 
@@ -60,7 +60,7 @@ Owner-only /admin/users page.
 
 List of users + memberships.
 
-Invite clerk (form: email, full name, company). Sends Supabase Auth invite.
+Invite clerk (form: email, full name, company). Creates account and sends email invite via Better Auth.
 
 Deactivate / reactivate clerk.
 

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1779559503502,
+      "tag": "0000_daily_human_fly",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779561366285,
+      "tag": "0001_plain_mathemanic",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779562142078,
+      "tag": "0002_unique_turbo",
+      "breakpoints": true
+    }
+  ]
+}

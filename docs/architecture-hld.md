@@ -2,7 +2,7 @@
 
 This document describes how the system is built. For what it does, see product-spec.md (see Product Spec).
 
-Audience: the developer building the system. Assumes familiarity with Next.js, Postgres, and modern web app patterns.
+Audience: the developer building the system. Assumes familiarity with Next.js, SQLite/Drizzle, and modern web app patterns.
 
 ## 1. Architecture goals
 
@@ -24,7 +24,7 @@ Non-goals: web-scale traffic, microservices, multi-region, real-time collaborati
 
 [ Flow Diagram — renders natively in the GitHub repo / Markdown viewer ]
 
-flowchart LR  Owner["Owner<br/>(phone / tablet / desktop)"]  Clerk["Clerk<br/>(phone / tablet)"]  App["Loan Manager<br/>(Next.js on Vercel)"]  DB[("Postgres<br/>+ Supabase Storage")]  WA["WhatsApp<br/>(tap-to-send via wa.me)"]  Cron["Vercel Cron<br/>(daily / hourly jobs)"]  Mail["Email provider<br/>(notifications)"]  Owner -- HTTPS --> App  Clerk -- HTTPS --> App  App -- SQL / RLS --> DB  App -- "wa.me deep links" --> WA  Cron -- triggers --> App  App -- "owner notifications" --> Mail
+flowchart LR  Owner["Owner<br/>(phone / tablet / desktop)"]  Clerk["Clerk<br/>(phone / tablet)"]  App["Loan Manager<br/>(Next.js on Vercel)"]  DB[("SQLite<br/>+ Local File Storage")]  WA["WhatsApp<br/>(tap-to-send via wa.me)"]  Cron["Vercel Cron<br/>(daily / hourly jobs)"]  Mail["Email provider<br/>(notifications)"]  Owner -- HTTPS --> App  Clerk -- HTTPS --> App  App -- Drizzle ORM --> DB  App -- "wa.me deep links" --> WA  Cron -- triggers --> App  App -- "owner notifications" --> Mail
 
 Customers never interact with the app directly. They only receive messages, sent through tap-to-send WhatsApp links the staff trigger.
 
@@ -32,11 +32,11 @@ Customers never interact with the app directly. They only receive messages, sent
 
 [ Flow Diagram — renders natively in the GitHub repo / Markdown viewer ]
 
-flowchart TB  subgraph Vercel    NextApp["Next.js App<br/>(Server Components,<br/>Route Handlers,<br/>Server Actions)"]    CronJobs["Vercel Cron<br/>(scheduled functions)"]  end  subgraph Supabase    Postgres[("Postgres<br/>+ Row Level Security")]    Auth["Supabase Auth"]    Storage["Supabase Storage<br/>(logos, photos, exports)"]    EdgeFn["Edge Functions<br/>(heavy compute,<br/>e.g. rating recompute)"]  end  subgraph External    Resend["Resend<br/>(transactional email)"]    Sentry["Sentry<br/>(error tracking)"]    GoogleDrive["Owner's Google Drive<br/>(weekly backup)"]  end  NextApp --> Postgres  NextApp --> Auth  NextApp --> Storage  NextApp --> Resend  NextApp --> Sentry  CronJobs --> NextApp  CronJobs --> EdgeFn  EdgeFn --> Postgres  EdgeFn --> GoogleDrive
+flowchart TB  subgraph Vercel    NextApp["Next.js App<br/>(Server Components,<br/>Route Handlers,<br/>Server Actions)"]    CronJobs["Vercel Cron<br/>(scheduled functions)"]    DB[("SQLite<br/>(Drizzle ORM)")]    Auth["Better Auth"]    Storage["Local File Storage<br/>(/uploads — logos, photos)"]  end  subgraph External    Resend["Resend<br/>(transactional email)"]    Sentry["Sentry<br/>(error tracking)"]    GoogleDrive["Owner's Google Drive<br/>(weekly backup)"]  end  NextApp --> DB  NextApp --> Auth  NextApp --> Storage  NextApp --> Resend  NextApp --> Sentry  CronJobs --> NextApp  CronJobs --> GoogleDrive
 
 ### Why this topology:
 
-Vercel + Supabase is the modern "managed everything" stack. One developer, near-zero ops.
+Vercel + SQLite (Drizzle) + Better Auth is a simple, self-contained stack. One developer, near-zero ops.
 
 All compute is serverless. Scales from zero to ~1000 concurrent users with no work.
 
@@ -45,6 +45,12 @@ Database is single-region (Singapore — closest to Kerala). Acceptable latency 
 No Kubernetes, no Docker, no CI/CD platform to manage. Vercel handles deployment from main branch.
 
 ## 4. Tech stack — locked decisions
+
+Runtime + package manager: Bun
+
+Why: Bun is a fast all-in-one runtime that ships a built-in SQLite driver (`bun:sqlite`), a package manager, and a TypeScript runner. This eliminates `better-sqlite3`, `tsx`/`ts-node`, and reduces cold-start time. Use `bun` everywhere: `bun install`, `bun dev`, `bunx drizzle-kit`, `bun drizzle/seed.ts`.
+
+Rules: Commit `bun.lockb` (not `package-lock.json`). Use `bunx` instead of `npx`. Scripts run with `bun <script>`.
 
 Framework: Next.js 15 (App Router) + TypeScript
 
@@ -60,29 +66,29 @@ TypeScript strict mode. No any. No @ts-ignore. No as casts outside of carefully-
 
 ESLint with next/core-web-vitals and next/typescript configs, plus a few additions (see § 13).
 
-Database: Postgres on Supabase
+Database: SQLite (`bun:sqlite`) with Drizzle ORM
 
-Why: Postgres is the right database for everything. Supabase removes infra work, gives us Row Level Security out of the box, and lets the owner own the data (it's just Postgres — can be migrated anywhere).
+Why: SQLite runs embedded in the process — no separate database server, no connection pools, no infra. Bun ships `bun:sqlite` natively so no extra package is needed. Drizzle's `bun-sqlite` adapter (`drizzle-orm/bun-sqlite`) wraps it with type-safe queries and migration management. The database file is a single portable artifact. At the scale of this app (~150 active loans) SQLite outperforms network-bound Postgres.
 
 Rules:
 
-All schema changes via migrations (supabase/migrations/*.sql). Forward-only.
+All schema changes via Drizzle Kit migrations (`drizzle/migrations/`). Run `npx drizzle-kit generate` to create, `npx drizzle-kit migrate` to apply. Forward-only.
 
-Row Level Security on every table. No exceptions.
+No Row Level Security — enforce access in Server Actions and middleware using the authenticated user's company memberships.
 
-Use bigint for money (paise) and any potentially-large counters. Never integer.
+Use `integer` for money (paise) and counters. SQLite INTEGER is 64-bit signed (same range as Postgres bigint).
 
-Use timestamptz for all times. Never timestamp.
+Use `text` for timestamps (ISO 8601 UTC strings). Never store as epoch integers.
 
-Use text for strings. Never varchar(n) (no practical benefit in Postgres).
+Use `text` for all strings and UUIDs. Generate UUIDs in app code with `crypto.randomUUID()`.
 
-Use uuid for primary keys, generated with gen_random_uuid().
+Use `text` for JSON columns (serialize/deserialize in app code).
 
 Foreign keys always set. ON DELETE set explicitly (almost always RESTRICT for business data; CASCADE only for audit/derived tables).
 
-Auth: Supabase Auth (email + password, plus TOTP 2FA for owner)
+Auth: Better Auth (email + password, plus TOTP 2FA for owner)
 
-Why: Built-in. Integrates with RLS. Owner doesn't need a separate auth service.
+Why: Framework-agnostic, self-hosted auth library with first-class Next.js App Router support. Handles sessions, email/password, TOTP 2FA via plugin. No external service dependency.
 
 Rules:
 
@@ -146,9 +152,9 @@ One Zod schema per form. Server Action re-validates against the same schema (def
 
 Schemas live in lib/schemas/ shared between client and server.
 
-Background jobs: Vercel Cron + Supabase Edge Functions
+Background jobs: Vercel Cron + Route Handlers
 
-Why: Vercel Cron schedules the trigger. The job itself is either a Route Handler (light work) or an Edge Function (heavy work like batch rating recompute).
+Why: Vercel Cron schedules the trigger. The job itself is a Route Handler (both light and heavy work — SQLite runs in-process so no round-trip penalty).
 
 Rules:
 
@@ -230,7 +236,7 @@ Owner notifications only
 
 ## 5. Multi-tenancy
 
-Both companies (Jeevana and Phenix) run on the same database, same code, same deployment. Isolation is enforced by company_id on every business row and Postgres Row Level Security.
+Both companies (Jeevana and Phenix) run on the same database, same code, same deployment. Isolation is enforced by `company_id` on every business row and application-level authorization checks in every Server Action.
 
 ### How it works
 
@@ -242,7 +248,7 @@ Owner has membership in both Jeevana and Phenix. UI exposes a top-bar company sw
 
 Clerks belong to one company only (typically).
 
-The app sets a request.company_id context for the session; queries automatically filter on this via RLS.
+The app stores company_id in the Better Auth session; query helpers explicitly filter on this.
 
 Why not separate databases / schemas
 
@@ -260,7 +266,7 @@ Branches are nested under a company. We'll add a branch_id foreign key (nullable
 
 ADR-001: Single-region deployment
 
-Decision: Deploy to a single region (Vercel → Singapore, Supabase → Singapore). Context: Users are in Kerala, India. Singapore is ~50ms away. Multi-region adds complexity without user-visible benefit. Consequences: Acceptable latency. Single point of regional failure (mitigated by daily backups to owner's Google Drive).
+Decision: Deploy to a single region (Vercel → Singapore). Context: Users are in Kerala, India. Singapore is ~50ms away. SQLite is embedded in the process so there is no separate database region to consider. Consequences: Acceptable latency. Single point of regional failure (mitigated by daily backups to owner's Google Drive).
 
 ADR-002: Server Components by default
 
@@ -268,7 +274,7 @@ Decision: Use Server Components and Server Actions wherever possible. Context: M
 
 ADR-003: Event-sourced derivations (rating, balance, fines)
 
-Decision: Don't store derived values like current_rating, outstanding_balance, overdue_days. Compute them from event tables (rating_changes, payments, fines). Context: Derived state goes stale. Keeping it correct requires triggers or app code that gets buggy. Computing on read is simple and correct. Consequences: Slightly more query complexity. Use Postgres VIEWS to encapsulate. Add a customer_summary materialized view, refreshed every 5 minutes, for the dashboard. Live data still queries the source tables.
+Decision: Don't store derived values like current_rating, outstanding_balance, overdue_days. Compute them from event tables (rating_changes, payments, fines). Context: Derived state goes stale. Keeping it correct requires triggers or app code that gets buggy. Computing on read is simple and correct. Consequences: Slightly more query complexity. Use SQLite VIEWs or Drizzle query helpers to encapsulate. Add a `customer_summary` cached table, refreshed by the nightly cron, for dashboard performance. Live data still queries the source tables.
 
 ADR-004: Money as bigint paise
 
@@ -302,7 +308,7 @@ Decision: No currency abstraction. Everything is INR. Context: Both companies op
 
 Directory layout (Next.js App Router):
 
-loan-manager/├── app/│   ├── (auth)/                # Public routes: /login, /forgot-password│   ├── (app)/                 # Authenticated routes│   │   ├── layout.tsx         # Sidebar, top-bar company switcher│   │   ├── dashboard/│   │   ├── customers/│   │   │   ├── page.tsx       # List│   │   │   ├── new/│   │   │   └── [dcs]/         # Detail view│   │   ├── loans/│   │   │   ├── new/│   │   │   └── [id]/│   │   ├── payments/│   │   ├── reports/│   │   ├── messages/          # Reminders, campaigns│   │   ├── settings/│   │   └── admin/             # Owner-only: roles, audit log│   └── api/                   # Route handlers (cron, webhooks, exports)├── components/│   ├── ui/                    # shadcn components│   ├── domain/                # Business components (RatingBadge, LoanCard, etc.)│   └── layout/                # AppShell, Sidebar, CompanySwitcher├── lib/│   ├── db/                    # Supabase client, query helpers│   ├── schemas/               # Zod schemas│   ├── domain/                # Business logic (interest, fines, rating)│   │   ├── interest.ts│   │   ├── fines.ts│   │   ├── rating.ts│   │   ├── eligibility.ts│   │   └── recovery.ts│   ├── i18n/│   ├── audit/│   └── utils/├── supabase/│   ├── migrations/            # SQL migrations│   ├── seed.sql│   └── functions/             # Edge functions├── tests/│   ├── e2e/                   # Playwright│   └── unit/                  # Vitest (logic in lib/domain)├── public/├── docs/                      # This documentation├── CLAUDE.md├── package.json└── vercel.json
+loan-manager/├── app/│   ├── (auth)/                # Public routes: /login, /forgot-password│   ├── (app)/                 # Authenticated routes│   │   ├── layout.tsx         # Sidebar, top-bar company switcher│   │   ├── dashboard/│   │   ├── customers/│   │   │   ├── page.tsx       # List│   │   │   ├── new/│   │   │   └── [dcs]/         # Detail view│   │   ├── loans/│   │   │   ├── new/│   │   │   └── [id]/│   │   ├── payments/│   │   ├── reports/│   │   ├── messages/          # Reminders, campaigns│   │   ├── settings/│   │   └── admin/             # Owner-only: roles, audit log│   └── api/                   # Route handlers (cron, exports, Better Auth handler)├── components/│   ├── ui/                    # shadcn components│   ├── domain/                # Business components (RatingBadge, LoanCard, etc.)│   └── layout/                # AppShell, Sidebar, CompanySwitcher├── lib/│   ├── db/                    # Drizzle client, query helpers│   ├── auth.ts                # Better Auth instance│   ├── auth-client.ts         # Better Auth client (client components)│   ├── schemas/               # Zod schemas│   ├── domain/                # Business logic (interest, fines, rating)│   │   ├── interest.ts│   │   ├── fines.ts│   │   ├── rating.ts│   │   ├── eligibility.ts│   │   └── recovery.ts│   ├── i18n/│   ├── audit/│   └── utils/├── drizzle/│   ├── migrations/            # SQL migrations (Drizzle Kit generated)│   ├── schema.ts              # Drizzle schema definition│   └── seed.ts                # Seed data├── tests/│   ├── e2e/                   # Playwright│   └── unit/                  # Vitest (logic in lib/domain)├── public/├── docs/                      # This documentation├── CLAUDE.md├── package.json└── vercel.json
 
 Key rule: domain logic lives in lib/domain/
 
@@ -332,9 +338,9 @@ Payment recording: < 1s for the optimistic UI update; < 2s for DB commit confirm
 
 Reliability
 
-Uptime: Best-effort 99.5% (Vercel + Supabase combined SLA — for a small business app this is fine).
+Uptime: Best-effort 99.5% (Vercel SLA — for a small business app this is fine).
 
-Backup: Automatic daily Postgres dump retained 30 days (Supabase). Weekly export of full data to owner's Google Drive (Edge Function).
+Backup: Daily copy of the SQLite database file to owner's Google Drive via cron. Weekly Excel exports of all tables.
 
 Recovery time objective: 4 hours from incident to functional restore.
 
@@ -344,9 +350,9 @@ Security
 
 All traffic over HTTPS (Vercel enforces).
 
-Database access only via Supabase, never direct.
+Database access only via Drizzle ORM in Server Components, Server Actions, or Route Handlers. Never from client components.
 
-Row Level Security enforced on every table.
+Authorization enforced in application code — every Server Action checks company membership before data access.
 
 2FA mandatory for owner.
 
@@ -354,7 +360,7 @@ Secrets in Vercel environment variables, never in code.
 
 No PII in logs. Log structure reviewed for accidental leaks.
 
-Supabase Storage objects scoped by company_id in policy.
+File uploads stored under `/uploads/<company_id>/` and served only to authenticated users of that company.
 
 Privacy
 
@@ -390,13 +396,13 @@ Errors → Sentry, with user role and company context.
 
 Performance → Vercel Analytics.
 
-Audit trail → Postgres audit_log table (queryable by owner).
+Audit trail → `audit_log` table in SQLite (queryable by owner).
 
 ## 9. Authentication & authorization flow
 
 [ Sequence Diagram — renders natively in the GitHub repo / Markdown viewer ]
 
-sequenceDiagram    actor U as User (Clerk/Owner)    participant App as Next.js App    participant SB as Supabase Auth    participant DB as Postgres (with RLS)    U->>App: Visit /login    App-->>U: Render login page    U->>App: Submit email + password    App->>SB: signInWithPassword()    alt 2FA required        SB-->>App: MFA challenge        App-->>U: Prompt for TOTP code        U->>App: Submit TOTP code        App->>SB: verifyMfa()    end    SB-->>App: Session JWT (in cookie)    App->>DB: Fetch user's company memberships    DB-->>App: [Jeevana role, Phenix role] (for owner)    App-->>U: Redirect to dashboard with default company selected    Note over U,DB: Subsequent requests    U->>App: Visit /customers    App->>DB: SELECT FROM customers WHERE company_id = $current_company    DB->>DB: RLS check: does auth.uid() have membership in $current_company?    DB-->>App: Allowed rows only    App-->>U: Render customer list
+sequenceDiagram    actor U as User (Clerk/Owner)    participant App as Next.js App    participant BA as Better Auth    participant DB as SQLite (Drizzle)    U->>App: Visit /login    App-->>U: Render login page    U->>App: Submit email + password    App->>BA: auth.api.signInWithEmail()    alt 2FA required        BA-->>App: MFA challenge        App-->>U: Prompt for TOTP code        U->>App: Submit TOTP code        App->>BA: auth.api.verifyTotp()    end    BA-->>App: Session cookie    App->>DB: Fetch user's company memberships    DB-->>App: [Jeevana role, Phenix role] (for owner)    App-->>U: Redirect to dashboard with default company selected    Note over U,DB: Subsequent requests    U->>App: Visit /customers    App->>DB: SELECT FROM customers WHERE company_id = $current_company    DB->>App: App code verifies user has membership in $current_company    DB-->>App: Rows for that company    App-->>U: Render customer list
 
 ## 10. Key data flows
 
@@ -404,7 +410,7 @@ Recording a payment
 
 [ Sequence Diagram — renders natively in the GitHub repo / Markdown viewer ]
 
-sequenceDiagram    actor Clerk    participant UI as Client Component    participant SA as Server Action    participant DB as Postgres    participant Domain as lib/domain/*    participant WA as wa.me    Clerk->>UI: Open customer DCS lookup    UI->>SA: getCustomerWithLoans(dcs)    SA->>DB: SELECT customer, active loans    DB-->>SA: Data    SA-->>UI: Render    Clerk->>UI: Click "Record payment", fill form    UI->>SA: recordPayment({loanId, amount, ref})    SA->>Domain: validatePayment(loan, amount)    Domain-->>SA: OK    SA->>DB: BEGIN TX    SA->>DB: INSERT into payments    SA->>DB: INSERT into audit_log    SA->>Domain: computeRatingSuggestions(customer, payments, fines)    alt Suggestion fires        SA->>DB: INSERT into rating_suggestions    end    SA->>DB: COMMIT    SA-->>UI: { success: true, newBalance }    UI->>UI: Update optimistic state    UI->>WA: Open wa.me link with pre-filled confirmation    Clerk->>WA: Tap send
+sequenceDiagram    actor Clerk    participant UI as Client Component    participant SA as Server Action    participant DB as SQLite (Drizzle)    participant Domain as lib/domain/*    participant WA as wa.me    Clerk->>UI: Open customer DCS lookup    UI->>SA: getCustomerWithLoans(dcs)    SA->>DB: SELECT customer, active loans    DB-->>SA: Data    SA-->>UI: Render    Clerk->>UI: Click "Record payment", fill form    UI->>SA: recordPayment({loanId, amount, ref})    SA->>Domain: validatePayment(loan, amount)    Domain-->>SA: OK    SA->>DB: BEGIN TX    SA->>DB: INSERT into payments    SA->>DB: INSERT into audit_log    SA->>Domain: computeRatingSuggestions(customer, payments, fines)    alt Suggestion fires        SA->>DB: INSERT into rating_suggestions    end    SA->>DB: COMMIT    SA-->>UI: { success: true, newBalance }    UI->>UI: Update optimistic state    UI->>WA: Open wa.me link with pre-filled confirmation    Clerk->>WA: Tap send
 
 Daily fine + rating recompute (cron)
 
@@ -530,9 +536,9 @@ Database access
 
 All DB access goes through lib/db/.
 
-Server Components and Server Actions use the server Supabase client.
+Server Components and Server Actions use the Drizzle client (server-only, imported from `lib/db/`).
 
-Client Components use the browser Supabase client (rarely needed thanks to RSC).
+Client Components never access the database directly. They use Better Auth client (`lib/auth-client.ts`) only for session reads.
 
 Error handling
 
@@ -570,19 +576,19 @@ GitHub Actions runs on every PR: lint, typecheck, unit tests, build.
 
 Vercel auto-deploys: every PR → preview URL; main → production.
 
-Database migrations applied via Supabase CLI in CI before deploy.
+Database migrations applied via Drizzle Kit (`npx drizzle-kit migrate`) in CI before deploy.
 
 ## 15. Open architectural questions
 
 These are decisions the developer can make once they're in the code. Documented here so they aren't forgotten.
 
-Search: Phase 2 needs DCS / phone / name search. Postgres full-text search (tsvector) is enough at our scale. If we hit limits, consider Meilisearch later. Default: Postgres FTS.
+Search: Phase 2 needs DCS / phone / name search. SQLite FTS5 virtual tables are sufficient at our scale. If we hit limits, consider Meilisearch later. Default: SQLite FTS5.
 
 PDF generation: Phase 6 generates printable documents from templates. @react-pdf/renderer is the default. If we need fancier layouts, consider serverless Puppeteer.
 
 Notification queue: Phase 6 reminders. Start with a simple notification_queue table polled by a cron job. Move to a real queue (e.g., Inngest) only if we hit volume issues.
 
-Real-time updates: Supabase Realtime is available. Use it for clerks seeing each other's payment entries live. Phase 5 nice-to-have.
+Real-time updates: Use TanStack Query refetch-on-focus for clerks seeing live payment entries. Phase 5 nice-to-have. No Realtime infrastructure needed.
 
 Rate limiting: Vercel has basic rate limiting. Probably enough. Revisit if abuse becomes a concern.
 

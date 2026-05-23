@@ -12,11 +12,11 @@ Install shadcn/ui base components: pnpm dlx shadcn@latest init and add button, i
 
 Configure ESLint strict, Prettier, TypeScript strict.
 
-Create Supabase project (Singapore region). Save URL + anon key.
+Install Drizzle ORM and Better Auth packages (`bun add`). Set up `drizzle/schema.ts` and `lib/auth.ts`.
 
-Connect repo to Vercel. Set env vars. Deploy main.
+Connect repo to Vercel. Set env vars (DATABASE_URL, BETTER_AUTH_SECRET). Deploy main.
 
-Install Supabase CLI locally. supabase init. supabase start works locally.
+Run `bunx drizzle-kit generate` and `bunx drizzle-kit migrate` to create the local SQLite database.
 
 Set up GitHub Actions: lint + typecheck + build on every PR.
 
@@ -32,7 +32,7 @@ Set up Playwright for E2E. Smoke test: / returns 200.
 
 ☐ Production URL serves a placeholder "Loan Manager" page.
 
-☐ Localhost runs the app and local Supabase together.
+☐ Localhost runs the app with a local SQLite database.
 
 ☐ PR opens a preview deployment.
 

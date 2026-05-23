@@ -124,7 +124,7 @@ Defer test mode (offline mode is more important).
 
 Last to cut: offline mode (operationally important in Kerala connectivity).
 
-Never cut: audit log, 2FA, RLS policies, backup. These are non-negotiable for trust.
+Never cut: audit log, 2FA, authorization checks, backup. These are non-negotiable for trust.
 
 After launch
 

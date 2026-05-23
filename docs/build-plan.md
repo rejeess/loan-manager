@@ -24,7 +24,7 @@ Project setup
 
 1 weekend
 
-Repo, Vercel, Supabase, CI live with empty app
+Repo, Vercel, SQLite + Drizzle + Better Auth, CI live with empty app
 
 1
 
@@ -114,11 +114,11 @@ Install shadcn/ui base components: pnpm dlx shadcn@latest init and add button, i
 
 Configure ESLint strict, Prettier, TypeScript strict.
 
-Create Supabase project (Singapore region). Save URL + anon key.
+Install Drizzle ORM and Better Auth packages (`bun add`). Set up `drizzle/schema.ts` and `lib/auth.ts`.
 
-Connect repo to Vercel. Set env vars. Deploy main.
+Connect repo to Vercel. Set env vars (DATABASE_URL, BETTER_AUTH_SECRET). Deploy main.
 
-Install Supabase CLI locally. supabase init. supabase start works locally.
+Run `bunx drizzle-kit generate` and `bunx drizzle-kit migrate` to create the local SQLite database.
 
 Set up GitHub Actions: lint + typecheck + build on every PR.
 
@@ -134,7 +134,7 @@ Set up Playwright for E2E. Smoke test: / returns 200.
 
 ☐ Production URL serves a placeholder "Loan Manager" page.
 
-☐ Localhost runs the app and local Supabase together.
+☐ Localhost runs the app with a local SQLite database.
 
 ☐ PR opens a preview deployment.
 
@@ -170,7 +170,7 @@ RLS policies on the above.
 
 /login page (email + password).
 
-2FA setup flow for owners (TOTP, stored in Supabase Auth).
+2FA setup flow for owners (TOTP via Better Auth TOTP plugin).
 
 2FA challenge on login when configured.
 
@@ -198,7 +198,7 @@ Owner-only /settings/company page.
 
 Form to edit company details (legal name, address, phone, license, T&Cs, logo).
 
-Logo upload to Supabase Storage.
+Logo upload to local file storage (`/uploads`).
 
 1.5 User management
 
@@ -206,7 +206,7 @@ Owner-only /admin/users page.
 
 List of users + memberships.
 
-Invite clerk (form: email, full name, company). Sends Supabase Auth invite.
+Invite clerk (form: email, full name, company). Creates account and sends email invite via Better Auth.
 
 Deactivate / reactivate clerk.
 
@@ -258,11 +258,9 @@ recovery_state_changes (table exists; default state inferred as healthy)
 
 customer_notes
 
-customer_summary materialized view + refresh function
+customer_summary cached table + scheduled refresh function
 
 Indexes (text search, phone lookup, DCS)
-
-RLS policies
 
 2.2 DCS auto-numbering
 
@@ -397,8 +395,6 @@ notification_queue (table exists; not yet sending — Phase 6)
 CHECK constraints (paper + cash = amount for DP, etc.)
 
 Indexes
-
-RLS policies
 
 3.4 Loan creation — Phenix DP first
 
@@ -708,7 +704,7 @@ lib/exports/excel.ts:
 
 One function per entity using exceljs.
 
-Upload to Supabase Storage, return signed URL.
+Save to local file storage, return a download URL.
 
 Audit-logged.
 
@@ -950,7 +946,7 @@ Defer test mode (offline mode is more important).
 
 Last to cut: offline mode (operationally important in Kerala connectivity).
 
-Never cut: audit log, 2FA, RLS policies, backup. These are non-negotiable for trust.
+Never cut: audit log, 2FA, authorization checks, backup. These are non-negotiable for trust.
 
 After launch
 

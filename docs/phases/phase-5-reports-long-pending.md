@@ -72,7 +72,7 @@ lib/exports/excel.ts:
 
 One function per entity using exceljs.
 
-Upload to Supabase Storage, return signed URL.
+Save to local file storage, return a download URL.
 
 Audit-logged.
 

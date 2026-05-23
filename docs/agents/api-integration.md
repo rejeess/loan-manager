@@ -6,23 +6,22 @@ The current app uses local fixtures in `data/seed.ts`. It is intentionally shape
 
 The app can work in upper environments with real APIs after these pieces are added:
 
-- Supabase project and environment variables.
-- Database migrations from `docs/data-model.md`.
-- RLS policies for owner and clerk access.
-- Supabase Auth and protected routes.
+- SQLite database setup with Drizzle schema and migrations from `docs/data-model.md`.
+- Authorization checks in Server Actions and middleware for owner and clerk access.
+- Better Auth integration and protected routes.
 - Typed data access in `lib/db/`.
 - Server Actions for mutations.
-- Optional Supabase Realtime subscriptions for live payment/customer updates.
+- TanStack Query refetch for live-ish updates where needed.
 
 ## Environment Variables
 
 Expected future variables:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_APP_URL=
+DATABASE_URL=./db/loan-manager.db
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=
 CRON_SECRET=
 RESEND_API_KEY=
 SENTRY_DSN=
@@ -35,8 +34,8 @@ Only `NEXT_PUBLIC_*` values may be used in client components.
 Reads:
 
 1. Server Component calls `lib/db/*` query helper.
-2. Query helper uses the Supabase server client.
-3. RLS limits rows by authenticated user and selected company.
+2. Query helper uses the Drizzle client (server-only).
+3. Application-level check verifies the user's company membership before returning data.
 4. Component renders typed data.
 
 Mutations:
@@ -48,7 +47,7 @@ Mutations:
 
 Realtime:
 
-- Use Supabase Realtime sparingly.
+- Use TanStack Query refetch for live-ish data updates.
 - Good candidates: payments list, DCS lookup summary, long-pending tracker.
-- Avoid using realtime as the source of truth; it is only a freshness layer.
+- Avoid polling aggressively; refetch on focus or on explicit user action.
 

@@ -54,7 +54,7 @@ Input failed Zod schema
 
 not_found
 
-Entity doesn't exist or RLS hides it
+Entity doesn't exist or authorization blocks access
 
 forbidden
 
@@ -70,7 +70,7 @@ Domain rule blocked the action
 
 external_service_failed
 
-Supabase/Resend/etc. error
+Database/Resend/etc. error
 
 internal_error
 
@@ -78,7 +78,7 @@ Unexpected — log to Sentry
 
 ## 2. Authentication actions
 
-Implemented by Supabase Auth. Listed here for completeness.
+Implemented by Better Auth. Listed here for completeness.
 
 signIn
 
@@ -98,7 +98,7 @@ inviteClerk (owner only)
 
 input: { email: string; fullName: string; companyId: string }output: { success: true; userId: string } | { error }
 
-Sends invitation email via Supabase Auth. Creates row in users and company_memberships (role: 'clerk').
+Creates account and sends invitation email via Better Auth. Creates row in users and company_memberships (role: 'clerk').
 
 ## 3. Company & session actions
 
@@ -112,7 +112,7 @@ switchCompany (owner only)
 
 input: { companyId: string }output: { success: true } | { error: 'forbidden' }
 
-Updates the session's selected company. RLS automatically scopes subsequent queries.
+Updates the session's selected company. Query helpers explicitly scope subsequent queries by company_id.
 
 updateProfile
 
@@ -122,7 +122,7 @@ updateCompany (owner only)
 
 input: { legalName?: string; address?: string; phone?: string; licenseNumber?: string; termsText?: string; logoFile?: File }output: { success: true }
 
-Updates the current company's record. Logo uploaded to Supabase Storage; path stored in companies.logo_path.
+Updates the current company's record. Logo saved to local file storage (`/uploads`); path stored in companies.logo_path.
 
 ## 4. Customer actions
 
@@ -400,7 +400,7 @@ exportToExcel
 
 input: {  entity: 'customers' | 'loans' | 'payments' | 'fines' | 'rating_history' | 'audit_log';  filters?: Record<string, unknown>;}output: { success: true; data: { downloadUrl: string } } | { error }
 
-Generates an Excel file via exceljs and uploads to Supabase Storage. Returns a signed URL valid for 24 hours.
+Generates an Excel file via exceljs and saves to local file storage. Returns a download URL.
 
 Owner-only for sensitive entities (payments aggregated income data, audit_log).
 
@@ -456,7 +456,7 @@ Heavy or external-integration work.
 
 weekly-backup
 
-Connects to owner's Google Drive via OAuth credentials stored in Supabase secrets. Exports each table as Excel, uploads to a dated folder.
+Connects to owner's Google Drive via OAuth credentials stored in environment variables. Exports each table as Excel, uploads to a dated folder.
 
 kyc-verification (Phase 6)
 

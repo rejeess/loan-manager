@@ -270,7 +270,7 @@ Customer pays daily interest from day 2, alongside any DP pathy they may have.
 
 ## 3. Loan balance computation
 
-Implemented as a function in lib/domain/balance.ts and (optionally) as a Postgres function for efficient queries.
+Implemented as a function in lib/domain/balance.ts and (optionally) as a SQL view for efficient queries.
 
 DP loans
 

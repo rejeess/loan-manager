@@ -18,11 +18,9 @@ recovery_state_changes (table exists; default state inferred as healthy)
 
 customer_notes
 
-customer_summary materialized view + refresh function
+customer_summary cached table + scheduled refresh function
 
 Indexes (text search, phone lookup, DCS)
-
-RLS policies
 
 2.2 DCS auto-numbering
 

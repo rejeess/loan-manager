@@ -1,19 +1,19 @@
 # State Management Plan
 
-Loan Manager should not start with a heavy global state framework. Most app data is server state and should be owned by Postgres/Supabase, with small client state for the active working context.
+Loan Manager should not start with a heavy global state framework. Most app data is server state and should be owned by SQLite/Drizzle, with small client state for the active working context.
 
 ## State Categories
 
 Server state:
 
 - Companies, memberships, customers, loans, payments, ratings, reports, reminders, audit log.
-- Source of truth is Supabase Postgres.
+- Source of truth is SQLite (accessed via Drizzle ORM).
 - Read initially through Server Components and typed query helpers.
 - Use TanStack Query for interactive screens needing refetch, optimistic updates, realtime refresh, or offline mutation persistence later.
 
 Session state:
 
-- Supabase Auth session.
+- Better Auth session.
 - Current user role and company memberships.
 - Resolved on the server whenever possible.
 
@@ -28,7 +28,7 @@ App state:
 Derived domain state:
 
 - Outstanding balances, overdue days, rating suggestions, fine thresholds, eligibility.
-- Compute from event tables, Postgres views, materialized views, or pure functions in `lib/domain/`.
+- Compute from event tables, SQLite views, cached summary tables, or pure functions in `lib/domain/`.
 - Do not mirror this as long-lived client global state.
 
 ## Recommended Implementation
@@ -45,7 +45,7 @@ Use server functions and query helpers for domain data:
 - `lib/db/loans.ts`
 - `lib/db/payments.ts`
 
-Add TanStack Query after the Supabase integration reaches customer/payment flows. It is most useful for:
+Add TanStack Query after the database integration reaches customer/payment flows. It is most useful for:
 
 - DCS lookup
 - Payment recording optimistic updates

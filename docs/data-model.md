@@ -1,8 +1,10 @@
 # Data Model
 
-Full Postgres schema for Loan Manager. Read architecture-hld.md (see Architecture Hld) § 4 first for principles (bigint paise, RLS, audit log, event-sourced derivations).
+Full SQLite/Drizzle schema for Loan Manager. Read architecture-hld.md (see Architecture Hld) § 4 first for principles (integer paise, app-level authorization, audit log, event-sourced derivations).
 
-This document is the authoritative schema reference. Migrations in supabase/migrations/ must match this document. When they diverge, this document is updated in the same PR.
+SQLite type notes: `uuid` columns are stored as `text` (UUID format, generated via `crypto.randomUUID()`); `bigint`/`integer` money columns are 64-bit signed integers; `timestamptz` columns are stored as `text` (ISO 8601 UTC); `jsonb` columns are stored as `text` (JSON-serialized).
+
+This document is the authoritative schema reference. Migrations in `drizzle/migrations/` must match this document. When they diverge, this document is updated in the same PR.
 
 ## 1. Entity-relationship overview
 
@@ -28,7 +30,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 name
 
@@ -62,7 +64,7 @@ logo_path
 
 text
 
-Path in Supabase Storage
+Path in local /uploads directory
 
 terms_text
 
@@ -90,7 +92,7 @@ INSERT INTO companies (name, dcs_next_number) VALUES  ('Jeevana Loans', 111),  (
 
 users
 
-Application users. One row per staff member. Linked to Supabase Auth via shared id.
+Application users. One row per staff member. The `id` corresponds to Better Auth's user id.
 
 Column
 
@@ -150,7 +152,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 user_id
 
@@ -200,7 +202,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 company_id
 
@@ -256,7 +258,7 @@ photo_path
 
 text
 
-Supabase Storage path
+Local /uploads path
 
 preferred_language
 
@@ -316,7 +318,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 customer_id
 
@@ -480,7 +482,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 loan_id
 
@@ -494,7 +496,7 @@ uuid
 
 NOT NULL, FK → companies.id ON DELETE RESTRICT
 
-Denormalised for RLS
+Denormalised for authorization checks
 
 amount_paise
 
@@ -562,7 +564,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 loan_id
 
@@ -634,7 +636,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 customer_id
 
@@ -720,7 +722,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 customer_id
 
@@ -798,7 +800,7 @@ id
 
 uuid
 
-PK, default gen_random_uuid()
+PK, default crypto.randomUUID()
 
 customer_id
 
@@ -1270,41 +1272,33 @@ CREATE OR REPLACE FUNCTION loan_balance(p_loan_id uuid)RETURNS TABLE (  total_pa
 
 Details in business-rules.md (see Business Rules).
 
-## 4. Row Level Security policies
+## 4. Application-level authorization
 
-RLS is enabled on every table. Policies enforce:
+SQLite does not support Row Level Security. Access control is enforced in application code.
 
-Companies/users/memberships: only readable by users with at least one membership in the affected company.
+Every Server Action and query helper must:
 
-All other tables: filtered by company_id matching one of the user's active memberships.
+1. Retrieve the authenticated user from the Better Auth session.
+2. Load the user's active company memberships from `company_memberships`.
+3. Reject the request if the requested `company_id` is not in the user's memberships.
 
-Owner-only data: profit, P&L queries route through a security-definer function checking role = 'owner'.
+Helper functions in `lib/auth/session.ts`:
 
-Helper: current_user_company_ids()
+```ts
+// Returns the company_ids the current user is a member of
+async function getCurrentUserCompanyIds(userId: string): Promise<string[]>
 
-CREATE OR REPLACE FUNCTION current_user_company_ids()RETURNS SETOF uuid AS $$  SELECT company_id FROM company_memberships  WHERE user_id = auth.uid() AND active = true;$$ LANGUAGE sql STABLE SECURITY DEFINER;
+// Returns the user's role within a specific company
+async function getCurrentUserRole(userId: string, companyId: string): Promise<'owner' | 'clerk' | null>
+```
 
-Helper: current_user_role(p_company_id uuid)
+Authorization patterns:
 
-CREATE OR REPLACE FUNCTION current_user_role(p_company_id uuid)RETURNS text AS $$  SELECT role FROM company_memberships  WHERE user_id = auth.uid() AND company_id = p_company_id AND active = true  LIMIT 1;$$ LANGUAGE sql STABLE SECURITY DEFINER;
+- Read domain data: check `company_id` is in `getCurrentUserCompanyIds()`.
+- Write domain data: same check plus clerk-restricted fields verified by role.
+- Owner-only operations (settings, roles, P&L, audit log, exports): check `getCurrentUserRole() === 'owner'`.
 
-Policy patterns
-
-Read access on domain tables:
-
-CREATE POLICY "members_can_read"  ON customers FOR SELECT  USING (company_id IN (SELECT current_user_company_ids()));
-
-Write access — owner or clerk:
-
-CREATE POLICY "members_can_insert"  ON customers FOR INSERT  WITH CHECK (company_id IN (SELECT current_user_company_ids()));
-
-Owner-only writes (settings, role changes):
-
-CREATE POLICY "owner_only_update"  ON companies FOR UPDATE  USING (current_user_role(id) = 'owner');
-
-Clerks can't read income data: P&L queries route through a security-definer function that explicitly checks the caller's role.
-
-Specific policies are written in migrations. The above patterns apply to most tables.
+These checks are performed in every Server Action — never trust `company_id` from client input.
 
 ## 5. Key invariants
 
@@ -1344,7 +1338,7 @@ Server Action sets this from session, never trusts client input.
 
 ## 6. Migration strategy
 
-Migrations in supabase/migrations/<timestamp>_<name>.sql.
+Migrations generated by Drizzle Kit: `bunx drizzle-kit generate` creates files in `drizzle/migrations/`. Apply with `bunx drizzle-kit migrate`.
 
 Forward-only — never edit a migration that has been merged.
 
@@ -1352,7 +1346,7 @@ New columns: add as nullable, backfill, then add NOT NULL constraint in a follow
 
 Renaming columns: add new column, sync writes, migrate reads, drop old column.
 
-Always include the corresponding RLS policy in the same migration as the table.
+Schema source of truth is `drizzle/schema.ts`. The data-model.md document and schema file must stay in sync; update both in the same PR.
 
 ## 7. Seed data
 
@@ -1360,19 +1354,19 @@ Required at first boot:
 
 companies rows for Jeevana and Phenix.
 
-A default owner user (created via Supabase Auth, then row in users and company_memberships for both companies).
+A default owner user (created via Better Auth, then row in users and company_memberships for both companies).
 
 A test mode companies row tagged is_test = true (Phase 7 — not at launch).
 
 Sample customers/loans for development environment only. Never in production.
 
-Seed lives in supabase/seed.sql and runs after supabase reset.
+Seed lives in `drizzle/seed.ts` and runs with `bun drizzle/seed.ts` (Bun runs TypeScript natively).
 
 ## 8. Backup and recovery
 
-Supabase takes automatic daily Postgres backups, retained 30 days.
+The SQLite database file is backed up daily: the Vercel cron job copies it to owner's Google Drive (see phase-7).
 
-Weekly export via Edge Function to owner's Google Drive: full schema dump + Excel exports of each table.
+Weekly export via Route Handler to owner's Google Drive: full database dump + Excel exports of each table.
 
 Restore procedure documented in docs/runbook-restore.md (created during Phase 1).
 
@@ -1384,7 +1378,7 @@ Composite index (company_id, created_at) on all major tables for paginated reads
 
 Partial index on loans where status = 'active' — most queries filter by active.
 
-GIN index on customers.name via tsvector('simple', name) for full-text search.
+FTS5 virtual table on customers for full-text search (name, dcs_number, phone).
 
 B-tree on customers.phone_e164 (last-4 search uses LIKE with index hint).
 

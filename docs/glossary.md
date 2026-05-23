@@ -70,7 +70,7 @@ WrittenOff. Loan written off as a loss. Customer locked at Defaulter.
 
 Technical terms
 
-RLS. Row Level Security — Postgres feature that filters rows per-user based on policies. Used to enforce company isolation.
+Authorization. Application-level access control enforced in Server Actions and middleware. Checks the authenticated user's company memberships before allowing reads or writes.
 
 Server Action. Next.js feature: a server-side function callable from client components, with end-to-end type safety. The primary RPC mechanism in this app.
 
@@ -78,7 +78,7 @@ Server Component. A React component that runs only on the server, never ships JS
 
 Audit log. Append-only table recording every state change. Used for trust, recovery, and compliance.
 
-Materialized view. A Postgres view whose results are stored on disk and refreshed periodically. Used for dashboard performance.
+Customer summary cache. A database table storing pre-computed customer summary data, refreshed periodically by the nightly cron job. Used for dashboard performance. SQLite does not support materialized views natively.
 
 Paise. 1/100th of an Indian Rupee. All money is stored as bigint paise. ₹1.00 = 100.
 

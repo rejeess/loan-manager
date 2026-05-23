@@ -10,20 +10,21 @@ This repository is a Next.js Progressive Web App for two Kerala finance companie
 
 ## Tech Direction
 
+- Runtime + package manager: Bun. Use `bun` / `bunx` everywhere instead of `node` / `npx` / `npm`.
 - Framework: Next.js App Router, TypeScript strict mode.
 - UI direction: mobile-first operational app, not a marketing site.
-- Database target: Supabase Postgres with Row Level Security.
-- Auth target: Supabase Auth, owner 2FA required later.
+- Database target: SQLite via Bun's built-in `bun:sqlite` driver with Drizzle ORM (`drizzle-orm/bun-sqlite`). No `better-sqlite3` needed.
+- Auth target: Better Auth, owner TOTP 2FA required later.
 - Money: always integer paise in domain and persistence layers.
-- Time: store UTC/timestamptz, display for Asia/Kolkata.
+- Time: store as UTC ISO 8601 text, display for Asia/Kolkata.
 - PWA: keep manifest and service worker installability working as features are added.
 
 ## Global State Plan
 
 Use the smallest state layer that fits each kind of state:
 
-- Server state: Supabase/Postgres data through Server Components, Server Actions, and eventually TanStack Query for interactive client screens.
-- Session state: Supabase Auth session and server-side user/company membership resolution.
+- Server state: SQLite/Drizzle data through Server Components, Server Actions, and eventually TanStack Query for interactive client screens.
+- Session state: Better Auth session and server-side user/company membership resolution.
 - App UI state: selected company, language, sidebar/mobile navigation state, filters, and form drafts.
 - Derived business state: do not store as global client state. Compute from events or query views, following `docs/architecture-hld.md`.
 
@@ -40,13 +41,13 @@ Avoid adding Redux/Zustand until there is a concrete state problem that React co
 
 Yes, this app can work in higher environments with real APIs. The intended path is:
 
-1. Supabase schema and RLS migrations in `supabase/migrations/`.
-2. Environment variables for Supabase URL, anon key, service role key where needed, Sentry, Resend, and Vercel cron secrets.
+1. Drizzle schema and migrations in `drizzle/migrations/`.
+2. Environment variables for database path, Better Auth secret, Sentry, Resend, and Vercel cron secrets.
 3. Server Actions for form mutations.
 4. Route Handlers for cron, exports, and future webhook-style integrations.
-5. Realtime subscriptions only where useful, such as clerks seeing payment entries update live.
+5. TanStack Query refetch for live-ish updates where needed (no Realtime layer needed).
 
-Never put service-role credentials in client components.
+Never access the database from client components; all DB access must go through Server Components, Server Actions, or Route Handlers.
 
 ## Documentation Map
 
@@ -74,9 +75,9 @@ Never put service-role credentials in client components.
 
 Phase 1 is the next serious implementation step:
 
-- Add Supabase project config and initial migrations.
+- Add SQLite database setup with Drizzle schema and initial migrations.
 - Add auth pages and protected app shell.
-- Replace mock companies with Supabase-backed companies.
+- Replace mock companies with database-backed companies.
 - Add role-aware navigation.
 - Add audit log foundation.
 

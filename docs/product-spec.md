@@ -548,7 +548,7 @@ Gold loans — not offered by either company.
 
 Realistic monthly running cost: ₹0 to ₹100 at current scale. ₹2,000/month at 1,000+ active loans.
 
-No software licences. No app store fees. No per-user fees. Hosted on free tiers of Vercel + Supabase until scale demands an upgrade.
+No software licences. No app store fees. No per-user fees. Hosted on Vercel free tier until scale demands an upgrade. SQLite storage is free.
 
 Browser support: Chrome, Safari, Edge on iOS 16+, Android 11+, recent desktop browsers.
 

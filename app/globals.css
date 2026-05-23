@@ -292,6 +292,50 @@ a {
   margin: 0;
 }
 
+.passkeyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 2px solid var(--teal);
+  background: transparent;
+  color: var(--teal);
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.passkeyButton:hover:not(:disabled) {
+  background: var(--teal);
+  color: #fff;
+}
+
+.passkeyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.orDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.orDivider::before,
+.orDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
 .loginForm {
   display: grid;
   gap: 14px;
@@ -303,6 +347,23 @@ a {
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 800;
+}
+
+.formError {
+  margin: 0;
+  color: var(--red);
+  font-size: 0.85rem;
+}
+
+.readonlyField {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  padding: 0 12px;
+  color: var(--ink);
 }
 
 .loginAccessBox {

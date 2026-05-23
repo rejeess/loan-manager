@@ -1,7 +1,7 @@
+import Link from "next/link";
 import type { SessionUser } from "@/components/auth/session";
-import type { companies } from "@/data/seed";
 
-type Company = (typeof companies)[number];
+type Company = { id: string; name: string; shortName: string };
 
 type TopbarProps = {
   user: SessionUser;
@@ -39,9 +39,9 @@ export function Topbar({ user, currentCompany, allowedCompanies, onCompanyChange
             <strong>{currentCompany.shortName}</strong>
           </div>
         )}
-        <button type="button" className="primaryButton">
+        <Link href={`/loans/new?companyId=${currentCompany.id}`} className="primaryButton">
           New loan
-        </button>
+        </Link>
       </div>
     </header>
   );

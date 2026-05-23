@@ -1,4 +1,5 @@
 import type { SessionUser } from "@/components/auth/session";
+import { PasskeyEnrollButton } from "@/components/auth/passkey-enroll-button";
 
 const baseNav = ["Dashboard", "DCS", "Customers", "Loans", "Payments", "Messages"];
 const ownerNav = ["Reports", "Settings", "Admin"];
@@ -33,6 +34,7 @@ export function Sidebar({ user, onSignOut }: SidebarProps) {
         <span className="rolePill">{user.role}</span>
         <strong>{user.name}</strong>
         <small>{user.email}</small>
+        <PasskeyEnrollButton />
         <button type="button" className="secondaryButton" onClick={onSignOut}>
           Sign out
         </button>
