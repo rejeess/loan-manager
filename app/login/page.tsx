@@ -63,7 +63,7 @@ export default function LoginPage() {
       });
 
       if (verifyRes.ok) {
-        router.replace("/");
+        window.location.replace("/");
       } else {
         const data = await verifyRes.json().catch(() => ({})) as { error?: string };
         setError(data.error ?? "Face ID sign-in failed");
