@@ -83,7 +83,16 @@ export async function POST(req: NextRequest) {
     userAgent: req.headers.get("user-agent") ?? null,
   });
 
-  const isSecure = req.nextUrl.protocol === "https:";
+  // Better Auth reads session cookies with getSignedCookie — the value must be
+  // token.HMAC-SHA256(token, BETTER_AUTH_SECRET) encoded as base64 (same as makeSignature).
+  const secret = process.env.BETTER_AUTH_SECRET ?? "";
+  const keyData = new TextEncoder().encode(secret);
+  const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(sessionToken));
+  const signedToken = `${sessionToken}.${btoa(String.fromCharCode(...new Uint8Array(sig)))}`;
+
+  const betterAuthUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+  const isSecure = betterAuthUrl.startsWith("https://");
   const cookieName = isSecure
     ? "__Secure-better-auth.session_token"
     : "better-auth.session_token";
@@ -91,7 +100,7 @@ export async function POST(req: NextRequest) {
   const response = NextResponse.json({ success: true });
   response.cookies.set({
     name: cookieName,
-    value: sessionToken,
+    value: signedToken,
     httpOnly: true,
     sameSite: "lax",
     path: "/",
