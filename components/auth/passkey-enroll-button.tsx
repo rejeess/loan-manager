@@ -27,10 +27,11 @@ export function PasskeyEnrollButton() {
         registrationResponse = await startRegistration({ optionsJSON });
       } catch (err) {
         setStatus("error");
+        const errName = err instanceof Error ? err.name : "UnknownError";
         setMessage(
-          err instanceof Error && err.name === "NotAllowedError"
+          errName === "NotAllowedError"
             ? "Cancelled"
-            : "Face ID setup failed"
+            : `Setup failed (${errName})`
         );
         return;
       }
